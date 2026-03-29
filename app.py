@@ -67,6 +67,12 @@ def dashboard():
         savings=user[5]
     )
 
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    return redirect(url_for("home"))
+
 @app.route("/deposit", methods=["POST"])
 def deposit():
     if "username" not in session:
