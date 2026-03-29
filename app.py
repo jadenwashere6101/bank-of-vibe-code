@@ -168,28 +168,47 @@ def withdraw():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        full_name = request.form["full_name"]
-        username = request.form["username"]
+        full_name = request.form["full_name"].strip()
+        username = request.form["username"].strip()
         password = request.form["password"]
-        hashed_password = generate_password_hash(password)
         checking_balance = request.form["checking_balance"]
         savings_balance = request.form["savings_balance"]
 
+        # Required fields check
+        if not full_name or not username or not password:
+            return render_template("register.html", error="All required fields must be filled out.")
+
+        # Password strength check
+        if len(password) < 8:
+            return render_template("register.html", error="Password must be at least 8 characters long.")
+
+        hashed_password = generate_password_hash(password)
+
         db = get_db_connection()
         cursor = db.cursor()
+
+        # Check if username already exists
+        cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+            cursor.close()
+            db.close()
+            return render_template("register.html", error="That username is already taken. Please choose another one.")
 
         query = """
         INSERT INTO users (full_name, username, password, checking_balance, savings_balance)
         VALUES (%s, %s, %s, %s, %s)
         """
         values = (full_name, username, hashed_password, checking_balance, savings_balance)
+
         cursor.execute(query, values)
         db.commit()
 
         cursor.close()
         db.close()
 
-        return f"Account created successfully for {full_name}!"
+        return render_template("register_success.html", name=full_name)
 
     return render_template("register.html")
 

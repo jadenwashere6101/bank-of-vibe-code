@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Account Created - Bank of a Vibe Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f8fc;
+            margin: 0;
+            padding: 0;
+            color: #1f2937;
+        }
+
+        .header {
+            background-color: #0f172a;
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            font-style: italic;
+            color: #60a5fa;
+            line-height: 1;
+            transform: skew(-12deg);
+        }
+
+        .brand-text h1 {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        .brand-text p {
+            margin: 4px 0 0 0;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 0 20px;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: 14px;
+            padding: 32px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .success-card h2 {
+            margin-top: 0;
+            color: #2563eb;
+            font-size: 36px;
+        }
+
+        .success-card p {
+            font-size: 18px;
+            color: #475569;
+            margin-bottom: 28px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .button-group a {
+            text-decoration: none;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .button-group a:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="brand">
+            <div class="logo">V</div>
+            <div class="brand-text">
+                <h1>Bank of a Vibe Code</h1>
+                <p>Account creation complete</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="success-card">
+            <h2>Account Created Successfully</h2>
+            <p>Welcome, {{ name }}. Your account has been created and is ready to use.</p>
+
+            <div class="button-group">
+                <a href="/login">Go to Login</a>
+                <a href="/">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
