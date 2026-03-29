@@ -91,6 +91,13 @@ def deposit():
         query = "UPDATE users SET savings_balance = savings_balance + %s WHERE username = %s"
 
     cursor.execute(query, (amount, username))
+
+    transaction_query = """
+    INSERT INTO transactions (username, action, account_type, amount)
+    VALUES (%s, %s, %s, %s)
+    """
+    cursor.execute(transaction_query, (username, "deposit", account, amount))
+
     db.commit()
 
     cursor.close()
@@ -132,6 +139,13 @@ def withdraw():
         query = "UPDATE users SET savings_balance = savings_balance - %s WHERE username = %s"
 
     cursor.execute(query, (amount, username))
+
+    transaction_query = """
+    INSERT INTO transactions (username, action, account_type, amount)
+    VALUES (%s, %s, %s, %s)
+    """
+    cursor.execute(transaction_query, (username, "withdraw", account, amount))
+
     db.commit()
 
     cursor.close()
