@@ -1,17 +1,121 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My Bank</title>
+    <title>Bank of a Vibe Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f8fc;
+            margin: 0;
+            padding: 0;
+            color: #1f2937;
+        }
+
+        .header {
+            background-color: #0f172a;
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            font-style: italic;
+            color: #60a5fa;
+            line-height: 1;
+            transform: skew(-12deg);
+        }
+
+        .brand-text h1 {
+            margin: 0;
+            font-size: 30px;
+        }
+
+        .brand-text p {
+            margin: 4px 0 0 0;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .hero-box {
+            background: white;
+            border-radius: 14px;
+            padding: 32px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .hero-box h2 {
+            margin-top: 0;
+            font-size: 36px;
+        }
+
+        .hero-box p {
+            color: #475569;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .button-group a {
+            text-decoration: none;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .button-group a:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Welcome to Vibe Coding Enterprise</h1>
+    <div class="header">
+        <div class="brand">
+            <div class="logo">V</div>
+            <div class="brand-text">
+                <h1>Bank of a Vibe Code</h1>
+                <p>Full-stack banking system</p>
+            </div>
+        </div>
+    </div>
 
-    <p>Please choose an option:</p>
+    <div class="container">
+        <div class="hero-box">
+            <h2>Welcome to Bank of a Vibe Code</h2>
+            <p>Securely manage your accounts, balances, and transaction history.</p>
 
-    <a href="/login">Login</a><br><br>
-    <a href="/register">Create Account</a>
+            <div class="button-group">
+                <a href="/login">Login</a>
+                <a href="/register">Create Account</a>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
-
