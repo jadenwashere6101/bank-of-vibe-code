@@ -171,8 +171,8 @@ def register():
         full_name = request.form["full_name"].strip()
         username = request.form["username"].strip()
         password = request.form["password"]
-        checking_balance = request.form["checking_balance"]
-        savings_balance = request.form["savings_balance"]
+        checking_balance = float(request.form["checking_balance"])
+        savings_balance = float(request.form["savings_balance"])
 
         # Required fields check
         if not full_name or not username or not password:
@@ -181,6 +181,10 @@ def register():
         # Password strength check
         if len(password) < 8:
             return render_template("register.html", error="Password must be at least 8 characters long.")
+
+        if checking_balance < 0 or savings_balance < 0:
+            return render_template("register.html", error="Starting balances cannot be negative.")
+
 
         hashed_password = generate_password_hash(password)
 
