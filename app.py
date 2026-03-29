@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ def get_db_connection():
 def home():
     return render_template("index.html")
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -25,16 +27,14 @@ def login():
         db = get_db_connection()
         cursor = db.cursor()
 
-        query = "SELECT * FROM users WHERE username = %s AND password = %s"
-        values = (username, password)
-
-        cursor.execute(query, values)
+        query = "SELECT * FROM users WHERE username = %s"
+        cursor.execute(query, (username,))
         user = cursor.fetchone()
 
         cursor.close()
         db.close()
 
-        if user:
+        if user and check_password_hash(user[3], password):
             session["username"] = user[2]
             return redirect(url_for("dashboard"))
         else:
@@ -171,6 +171,7 @@ def register():
         full_name = request.form["full_name"]
         username = request.form["username"]
         password = request.form["password"]
+        hashed_password = generate_password_hash(password)
         checking_balance = request.form["checking_balance"]
         savings_balance = request.form["savings_balance"]
 
@@ -181,8 +182,7 @@ def register():
         INSERT INTO users (full_name, username, password, checking_balance, savings_balance)
         VALUES (%s, %s, %s, %s, %s)
         """
-        values = (full_name, username, password, checking_balance, savings_balance)
-
+        values = (full_name, username, hashed_password, checking_balance, savings_balance)
         cursor.execute(query, values)
         db.commit()
 
