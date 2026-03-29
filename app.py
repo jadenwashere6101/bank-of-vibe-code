@@ -38,7 +38,7 @@ def login():
             session["username"] = user[2]
             return redirect(url_for("dashboard"))
         else:
-            return "Invalid username or password."
+            return render_template("login.html", error="Invalid username or password.")
 
     return render_template("login.html")
 

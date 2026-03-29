@@ -119,6 +119,11 @@
         <div class="form-card">
             <h2>Login</h2>
 
+            {% if error %}
+                <p style="color: #dc2626; font-weight: bold; margin-bottom: 18px;">{{ error }}</p>
+            {% endif %}
+
+
             <form action="/login" method="POST">
                 <label>Username</label>
                 <input type="text" name="username" required>
