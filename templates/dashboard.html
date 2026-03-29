@@ -14,7 +14,6 @@
 
     <h2>Deposit Money</h2>
     <form action="/deposit" method="POST">
-        <input type="hidden" name="username" value="{{ username }}">
 
         <label>Account:</label><br>
         <select name="account">
@@ -30,7 +29,6 @@
 
     <h2>Withdraw Money</h2>
     <form action="/withdraw" method="POST">
-        <input type="hidden" name="username" value="{{ username }}">
 
         <label>Account:</label><br>
         <select name="account">
@@ -45,7 +43,32 @@
     </form>
 
     <br>
-    <a href="/logout">Logout</a>
+<h2>Transaction History</h2>
+
+{% if transactions %}
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Action</th>
+            <th>Account</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+        {% for transaction in transactions %}
+        <tr>
+            <td>{{ transaction.action }}</td>
+            <td>{{ transaction.account_type }}</td>
+            <td>${{ transaction.amount }}</td>
+            <td>{{ transaction.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>No transactions yet.</p>
+{% endif %}
+
+<br>
+
+<a href="/logout">Logout</a>
 
 </body>
 </html>

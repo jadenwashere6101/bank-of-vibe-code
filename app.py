@@ -42,6 +42,7 @@ def login():
 
     return render_template("login.html")
 
+
 @app.route("/dashboard")
 def dashboard():
     if "username" not in session:
@@ -56,7 +57,18 @@ def dashboard():
     cursor.execute(query, (username,))
     user = cursor.fetchone()
 
+    transaction_cursor = db.cursor(dictionary=True)
+    transaction_query = """
+    SELECT action, account_type, amount, created_at
+    FROM transactions
+    WHERE username = %s
+    ORDER BY created_at DESC
+    """
+    transaction_cursor.execute(transaction_query, (username,))
+    transactions = transaction_cursor.fetchall()
+
     cursor.close()
+    transaction_cursor.close()
     db.close()
 
     return render_template(
@@ -64,9 +76,9 @@ def dashboard():
         name=user[1],
         username=user[2],
         checking=user[4],
-        savings=user[5]
+        savings=user[5],
+        transactions=transactions
     )
-
 
 @app.route("/logout")
 def logout():
