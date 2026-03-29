@@ -1,8 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for
 import mysql.connector
 
 app = Flask(__name__)
-app.secret_key = "my_super_secret_key"
 
 def get_db_connection():
     return mysql.connector.connect(
@@ -35,20 +34,14 @@ def login():
         db.close()
 
         if user:
-            session["username"] = user[2]
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("dashboard", username=user[2]))
         else:
             return "Invalid username or password."
 
     return render_template("login.html")
 
-@app.route("/dashboard")
-def dashboard():
-    if "username" not in session:
-        return redirect(url_for("login"))
-
-    username = session["username"]
-
+@app.route("/dashboard/<username>")
+def dashboard(username):
     db = get_db_connection()
     cursor = db.cursor()
 
@@ -69,10 +62,7 @@ def dashboard():
 
 @app.route("/deposit", methods=["POST"])
 def deposit():
-    if "username" not in session:
-        return redirect(url_for("login"))
-
-    username = session["username"]
+    username = request.form["username"]
     account = request.form["account"]
     amount = float(request.form["amount"])
 
@@ -84,20 +74,19 @@ def deposit():
     else:
         query = "UPDATE users SET savings_balance = savings_balance + %s WHERE username = %s"
 
-    cursor.execute(query, (amount, username))
+    values = (amount, username)
+
+    cursor.execute(query, values)
     db.commit()
 
     cursor.close()
     db.close()
 
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard", username=username))
 
 @app.route("/withdraw", methods=["POST"])
 def withdraw():
-    if "username" not in session:
-        return redirect(url_for("login"))
-
-    username = session["username"]
+    username = request.form["username"]
     account = request.form["account"]
     amount = float(request.form["amount"])
 
@@ -115,14 +104,14 @@ def withdraw():
         if amount > current_balance:
             cursor.close()
             db.close()
-            return "Insufficient checking balance."
+            return "Withdrawal failed: insufficient checking balance."
         query = "UPDATE users SET checking_balance = checking_balance - %s WHERE username = %s"
     else:
         current_balance = float(user["savings_balance"])
         if amount > current_balance:
             cursor.close()
             db.close()
-            return "Insufficient savings balance."
+            return "Withdrawal failed: insufficient savings balance."
         query = "UPDATE users SET savings_balance = savings_balance - %s WHERE username = %s"
 
     cursor.execute(query, (amount, username))
@@ -131,7 +120,7 @@ def withdraw():
     cursor.close()
     db.close()
 
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard", username=username))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
