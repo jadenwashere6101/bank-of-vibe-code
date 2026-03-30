@@ -1,16 +1,21 @@
+import os
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
 
+
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = "my_super_secret_key"
+app.secret_key = os.getenv("SECRET_KEY")
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="jadenapp",
-        password="Password123!",
-        database="bank"
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME")
     )
 
 @app.route("/")
