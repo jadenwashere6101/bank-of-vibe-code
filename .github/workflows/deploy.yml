@@ -1,0 +1,59 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment archive
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='myenv' \
+            --exclude='.env' \
+            --exclude='__pycache__' \
+            --exclude='.github' \
+            -czf app.tar.gz .
+
+      - name: Copy archive to VM
+        run: |
+          scp app.tar.gz ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/app.tar.gz
+
+      - name: Deploy on VM
+        run: |
+          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            set -e
+
+            mkdir -p ~/my_bank_app
+            tar -xzf /tmp/app.tar.gz -C ~/my_bank_app
+
+            cd ~/my_bank_app
+
+            docker stop bank-app || true
+            docker rm bank-app || true
+
+            docker build -t bank-of-vibe-code .
+            docker run -d --name bank-app --env-file .env --network host bank-of-vibe-code
+
+            sudo systemctl restart nginx
+          EOF
