@@ -94,6 +94,10 @@ def deposit():
     account = request.form["account"]
     amount = float(request.form["amount"])
 
+    if amount <= 0:
+        return "Amount must be greater than zero."
+
+
     db = get_db_connection()
     cursor = db.cursor()
 
@@ -125,6 +129,10 @@ def withdraw():
     username = session["username"]
     account = request.form["account"]
     amount = float(request.form["amount"])
+
+    if amount <= 0:
+        return "Amount must be greater than zero."
+
 
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
