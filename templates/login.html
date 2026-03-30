@@ -2,106 +2,7 @@
 <html>
 <head>
     <title>Login - Bank of a Vibe Code</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f8fc;
-            margin: 0;
-            padding: 0;
-            color: #1f2937;
-        }
-
-        .header {
-            background-color: #0f172a;
-            color: white;
-            padding: 20px 40px;
-            display: flex;
-            align-items: center;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .logo {
-            font-size: 48px;
-            font-weight: bold;
-            font-style: italic;
-            color: #60a5fa;
-            line-height: 1;
-            transform: skew(-12deg);
-        }
-
-        .brand-text h1 {
-            margin: 0;
-            font-size: 30px;
-        }
-
-        .brand-text p {
-            margin: 4px 0 0 0;
-            color: #cbd5e1;
-            font-size: 14px;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .form-card {
-            background: white;
-            border-radius: 14px;
-            padding: 30px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-        }
-
-        .form-card h2 {
-            margin-top: 0;
-            color: #2563eb;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: bold;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 18px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 15px;
-        }
-
-        button {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #1d4ed8;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-top: 16px;
-            color: #2563eb;
-            text-decoration: none;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
@@ -120,9 +21,8 @@
             <h2>Login</h2>
 
             {% if error %}
-                <p style="color: #dc2626; font-weight: bold; margin-bottom: 18px;">{{ error }}</p>
+                <p class="error-message">{{ error }}</p>
             {% endif %}
-
 
             <form action="/login" method="POST">
                 <label>Username</label>
