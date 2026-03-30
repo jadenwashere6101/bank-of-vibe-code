@@ -33,11 +33,11 @@ jobs:
             --exclude='.env' \
             --exclude='__pycache__' \
             --exclude='.github' \
-            -czf app.tar.gz .
+            -czf /tmp/app.tar.gz .
 
       - name: Copy archive to VM
         run: |
-          scp app.tar.gz ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/app.tar.gz
+          scp /tmp/app.tar.gz ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/app.tar.gz
 
       - name: Deploy on VM
         run: |
@@ -49,10 +49,9 @@ jobs:
 
             cd ~/my_bank_app
 
-            # Docker commands to refresh the container
             docker stop bank-app || true
             docker rm bank-app || true
-            
+
             docker build -t bank-of-vibe-code .
             docker run -d --name bank-app --env-file .env --network host bank-of-vibe-code
 
