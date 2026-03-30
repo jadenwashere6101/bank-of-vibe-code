@@ -49,9 +49,10 @@ jobs:
 
             cd ~/my_bank_app
 
+            # Docker commands to refresh the container
             docker stop bank-app || true
             docker rm bank-app || true
-
+            
             docker build -t bank-of-vibe-code .
             docker run -d --name bank-app --env-file .env --network host bank-of-vibe-code
 
