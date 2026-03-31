@@ -2,4 +2,6 @@ Flask
 mysql-connector-python
 python-dotenv
 Werkzeug
-
+Flask-Limiter
+Flask-WTF
+gunicorn

@@ -25,6 +25,8 @@
             {% endif %}
 
             <form action="/register" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <label>Full Name</label>
                 <input type="text" name="full_name" required>
 
@@ -35,10 +37,10 @@
                 <input type="password" name="password" required>
 
                 <label>Starting Checking Balance</label>
-                <input type="number" step="0.01" name="checking_balance" value="0.00">
+                <input type="number" step="0.01" name="checking_balance" value="0.00" required>
 
                 <label>Starting Savings Balance</label>
-                <input type="number" step="0.01" name="savings_balance" value="0.00">
+                <input type="number" step="0.01" name="savings_balance" value="0.00" required>
 
                 <button type="submit">Create Account</button>
             </form>

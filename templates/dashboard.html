@@ -11,30 +11,26 @@
             <div class="logo">V</div>
             <div class="brand-text">
                 <h1>Bank of a Vibe Code</h1>
-                <p>Full-stack banking system dashboard</p>
+                <p>Welcome, {{ user['username'] }}</p>
             </div>
         </div>
+
         <div class="logout-link">
-            <a href="/logout">Logout</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
         </div>
     </div>
 
     <div class="container">
 
-        <div class="welcome-box">
-            <h2>Welcome, {{ name }}</h2>
-            <p>Manage your accounts and track your recent activity.</p>
-        </div>
-
         <div class="balance-grid">
             <div class="balance-card">
                 <h3>Checking Account</h3>
-                <div class="balance-amount">${{ checking }}</div>
+                <div class="balance-amount">${{ "%.2f"|format(user['checking_balance']) }}</div>
             </div>
 
             <div class="balance-card">
                 <h3>Savings Account</h3>
-                <div class="balance-amount">${{ savings }}</div>
+                <div class="balance-amount">${{ "%.2f"|format(user['savings_balance']) }}</div>
             </div>
         </div>
 
@@ -42,6 +38,8 @@
             <div class="action-card">
                 <h3>Deposit Money</h3>
                 <form action="/deposit" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                     <label>Account</label>
                     <select name="account">
                         <option value="checking">Checking</option>
@@ -58,6 +56,8 @@
             <div class="action-card">
                 <h3>Withdraw Money</h3>
                 <form action="/withdraw" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                     <label>Account</label>
                     <select name="account">
                         <option value="checking">Checking</option>
@@ -77,20 +77,24 @@
 
             {% if transactions %}
                 <table>
-                    <tr>
-                        <th>Action</th>
-                        <th>Account</th>
-                        <th>Amount</th>
-                        <th>Date</th>
-                    </tr>
-                    {% for transaction in transactions %}
-                    <tr>
-                        <td>{{ transaction.action }}</td>
-                        <td>{{ transaction.account_type }}</td>
-                        <td>${{ transaction.amount }}</td>
-                        <td>{{ transaction.created_at }}</td>
-                    </tr>
-                    {% endfor %}
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Account</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td>{{ transaction['action'] }}</td>
+                            <td>{{ transaction['account_type'] }}</td>
+                            <td>${{ "%.2f"|format(transaction['amount']) }}</td>
+                            <td>{{ transaction['created_at'] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
             {% else %}
                 <p class="empty-text">No transactions yet.</p>

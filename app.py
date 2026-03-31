@@ -1,14 +1,47 @@
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import mysql.connector
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_wtf import CSRFProtect
 
 
 load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.secret_key = os.getenv("SECRET_KEY")
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = 1800
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[]
+)
+
+csrf = CSRFProtect(app)
+
+if not os.path.exists("logs"):
+    os.mkdir("logs")
+
+file_handler = RotatingFileHandler("logs/bank_app.log", maxBytes=100000, backupCount=3)
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s %(levelname)s: %(message)s"
+))
+
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
+app.logger.info("Bank of a Vibe Code startup")
+
 
 def get_db_connection():
     return mysql.connector.connect(
@@ -24,6 +57,7 @@ def home():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def login():
     if request.method == "POST":
         username = request.form["username"]
@@ -40,12 +74,18 @@ def login():
         db.close()
 
         if user and check_password_hash(user[3], password):
+            session.permanent = True
             session["username"] = user[2]
+            # SUCCESS LOG: This helps you see who is actually using your app
+            app.logger.info(f"User logged in: {username} from IP: {request.remote_addr}")
             return redirect(url_for("dashboard"))
         else:
-            return render_template("login.html", error="Invalid username or password.")
+            # FAILURE LOG: This is key for spotting hackers trying to guess passwords
+            app.logger.warning(f"Failed login attempt for username: {username} from IP: {request.remote_addr}")
+            return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
+
 
 
 @app.route("/dashboard")
@@ -56,11 +96,11 @@ def dashboard():
     username = session["username"]
 
     db = get_db_connection()
-    cursor = db.cursor()
 
-    query = "SELECT * FROM users WHERE username = %s"
-    cursor.execute(query, (username,))
-    user = cursor.fetchone()
+    user_cursor = db.cursor(dictionary=True)
+    user_query = "SELECT * FROM users WHERE username = %s"
+    user_cursor.execute(user_query, (username,))
+    user = user_cursor.fetchone()
 
     transaction_cursor = db.cursor(dictionary=True)
     transaction_query = """
@@ -72,23 +112,23 @@ def dashboard():
     transaction_cursor.execute(transaction_query, (username,))
     transactions = transaction_cursor.fetchall()
 
-    cursor.close()
+    user_cursor.close()
     transaction_cursor.close()
     db.close()
 
     return render_template(
         "dashboard.html",
-        name=user[1],
-        username=user[2],
-        checking=user[4],
-        savings=user[5],
+        user=user,
         transactions=transactions
     )
+
+
 
 @app.route("/logout")
 def logout():
     session.pop("username", None)
     return redirect(url_for("home"))
+
 
 @app.route("/deposit", methods=["POST"])
 def deposit():
@@ -101,7 +141,6 @@ def deposit():
 
     if amount <= 0:
         return "Amount must be greater than zero."
-
 
     db = get_db_connection()
     cursor = db.cursor()
@@ -121,10 +160,15 @@ def deposit():
 
     db.commit()
 
+    # TRANSACTION LOG: This records the movement of money in your server logs
+    app.logger.info(f"Deposit: user={username} amount={amount} account={account}")
+
     cursor.close()
     db.close()
 
     return redirect(url_for("dashboard"))
+
+
 
 @app.route("/withdraw", methods=["POST"])
 def withdraw():
@@ -137,7 +181,6 @@ def withdraw():
 
     if amount <= 0:
         return "Amount must be greater than zero."
-
 
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
@@ -173,10 +216,15 @@ def withdraw():
 
     db.commit()
 
+    # WITHDRAWAL LOG: Crucial for fraud detection and balance disputes
+    app.logger.info(f"Withdraw: user={username} amount={amount} account={account}")
+
     cursor.close()
     db.close()
 
     return redirect(url_for("dashboard"))
+
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -193,11 +241,10 @@ def register():
 
         # Password strength check
         if len(password) < 8:
-            return render_template("register.html", error="Password must be at least 8 characters long.")
+            return render_template("register.html", error="Password must be at least 8 characters")
 
         if checking_balance < 0 or savings_balance < 0:
             return render_template("register.html", error="Starting balances cannot be negative.")
-
 
         hashed_password = generate_password_hash(password)
 
@@ -211,7 +258,7 @@ def register():
         if existing_user:
             cursor.close()
             db.close()
-            return render_template("register.html", error="That username is already taken. Please choose another one.")
+            return render_template("register.html", error="That username is already taken. Please choose another.")
 
         query = """
         INSERT INTO users (full_name, username, password, checking_balance, savings_balance)
@@ -222,6 +269,9 @@ def register():
         cursor.execute(query, values)
         db.commit()
 
+        # REGISTRATION LOG: Track new users and their IP for security/growth metrics
+        app.logger.info(f"New user registered: {username} from IP: {request.remote_addr}")
+
         cursor.close()
         db.close()
 
@@ -230,10 +280,28 @@ def register():
     return render_template("register.html")
 
 
-
 @app.route("/test500")
 def test500():
     raise Exception("Test 500 error")
+
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
+        "img-src 'self' data:; "
+        "font-src 'self' data:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none';"
+    )
+    return response
 
 
 
@@ -246,7 +314,12 @@ def internal_error(error):
     return render_template("500.html"), 500
 
 
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_template("login.html", error="Too many login attempts. Please wait a minute and try again."), 429
+
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
