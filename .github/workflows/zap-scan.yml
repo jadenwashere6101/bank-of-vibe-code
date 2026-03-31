@@ -1,4 +1,9 @@
 name: ZAP Baseline Scan
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 
 on:
   push:
