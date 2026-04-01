@@ -9,6 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf import CSRFProtect
+from decimal import Decimal, InvalidOperation
 
 
 load_dotenv()
@@ -98,7 +99,11 @@ def dashboard():
     db = get_db_connection()
 
     user_cursor = db.cursor(dictionary=True)
-    user_query = "SELECT * FROM users WHERE username = %s"
+    user_query = """
+    SELECT username, checking_balance, savings_balance
+    FROM users
+    WHERE username = %s
+    """
     user_cursor.execute(user_query, (username,))
     user = user_cursor.fetchone()
 
@@ -131,16 +136,21 @@ def logout():
 
 
 @app.route("/deposit", methods=["POST"])
+@limiter.limit("10 per minute")
 def deposit():
     if "username" not in session:
         return redirect(url_for("login"))
 
     username = session["username"]
     account = request.form["account"]
-    amount = float(request.form["amount"])
+    try:
+        amount = Decimal(request.form["amount"])
+    except InvalidOperation:
+        return redirect(url_for("dashboard"))
 
-    if amount <= 0:
-        return "Amount must be greater than zero."
+    if amount <= 0 or amount > Decimal("10000.00"):
+        return redirect(url_for("dashboard"))
+
 
     db = get_db_connection()
     cursor = db.cursor()
@@ -171,42 +181,50 @@ def deposit():
 
 
 @app.route("/withdraw", methods=["POST"])
+@limiter.limit("10 per minute")
+@limiter.limit("10 per minute")
 def withdraw():
     if "username" not in session:
         return redirect(url_for("login"))
 
     username = session["username"]
     account = request.form["account"]
-    amount = float(request.form["amount"])
 
-    if amount <= 0:
-        return "Amount must be greater than zero."
+    try:
+        amount = Decimal(request.form["amount"])
+    except InvalidOperation:
+        return redirect(url_for("dashboard"))
+
+    if amount <= 0 or amount > Decimal("10000.00"):
+        return redirect(url_for("dashboard"))
 
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
-
-    cursor.execute(
-        "SELECT checking_balance, savings_balance FROM users WHERE username = %s",
-        (username,)
-    )
-    user = cursor.fetchone()
+    cursor = db.cursor()
 
     if account == "checking":
-        current_balance = float(user["checking_balance"])
-        if amount > current_balance:
-            cursor.close()
-            db.close()
-            return "Insufficient checking balance."
-        query = "UPDATE users SET checking_balance = checking_balance - %s WHERE username = %s"
+        query = """
+        UPDATE users
+        SET checking_balance = checking_balance - %s
+        WHERE username = %s AND checking_balance >= %s
+        """
+    elif account == "savings":
+        query = """
+        UPDATE users
+        SET savings_balance = savings_balance - %s
+        WHERE username = %s AND savings_balance >= %s
+        """
     else:
-        current_balance = float(user["savings_balance"])
-        if amount > current_balance:
-            cursor.close()
-            db.close()
-            return "Insufficient savings balance."
-        query = "UPDATE users SET savings_balance = savings_balance - %s WHERE username = %s"
+        cursor.close()
+        db.close()
+        return redirect(url_for("dashboard"))
 
-    cursor.execute(query, (amount, username))
+    cursor.execute(query, (amount, username, amount))
+
+    if cursor.rowcount == 0:
+        db.rollback()
+        cursor.close()
+        db.close()
+        return redirect(url_for("dashboard"))
 
     transaction_query = """
     INSERT INTO transactions (username, action, account_type, amount)
@@ -215,23 +233,34 @@ def withdraw():
     cursor.execute(transaction_query, (username, "withdraw", account, amount))
 
     db.commit()
-
-    # WITHDRAWAL LOG: Crucial for fraud detection and balance disputes
-    app.logger.info(f"Withdraw: user={username} amount={amount} account={account}")
-
     cursor.close()
     db.close()
+
+    app.logger.info(f"Withdraw: user={username} amount={amount} account={account}")
 
     return redirect(url_for("dashboard"))
 
 
 
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def register():
     if request.method == "POST":
         full_name = request.form["full_name"].strip()
         username = request.form["username"].strip()
         password = request.form["password"]
+
+
+        if len(full_name) > 100:
+            return render_template("register.html", error="Full name is too long.")
+
+        if len(username) > 50:
+            return render_template("register.html", error="Username is too long.")
+
+        if len(password) > 128:
+            return render_template("register.html", error="Password is too long.")
+
+
         checking_balance = float(request.form["checking_balance"])
         savings_balance = float(request.form["savings_balance"])
 
@@ -279,10 +308,6 @@ def register():
 
     return render_template("register.html")
 
-
-@app.route("/test500")
-def test500():
-    raise Exception("Test 500 error")
 
 
 
