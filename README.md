@@ -1,23 +1,46 @@
-# My Bank App
+#  Bank of a Vibe Code
 
-A full-stack banking system built using Flask, MySQL, and deployed on an Azure VM.
+A security-focused full-stack banking application built in ~5 days and deployed to a live Azure VM.
 
-## Project Writeup
+- Built with **Flask, MySQL, Docker, Nginx**
+- Hardened against common **OWASP-style web risks**
+- Includes **CI/CD with automated OWASP ZAP security scanning**
+- Designed around real-world failure scenarios like **race conditions, financial precision, and abuse prevention**
+
+## 📄 Case Study
 
 [View the full case study](./WRITEUP.pdf)
 
-## Features
-- User registration and login
-- Session-based authentication
-- Dashboard with account balances
-- Deposit and withdraw functionality
-- Real-time updates with redirects
+This project was developed with AI as a tool, but all architectural decisions, security validations, and fixes were manually directed and verified.
 
 ## Tech Stack
-- Backend: Flask (Python)
-- Database: MySQL
-- Frontend: HTML
-- Hosting: Azure VM
 
-## Status
-Currently under active development. More features and security improvements coming soon.
+### Backend
+- Python (Flask)
+- Gunicorn (WSGI server, multi-worker)
+
+### Database
+- MySQL (parameterized queries, transactional integrity)
+
+### Frontend
+- HTML (Jinja2 templates)
+
+### Infrastructure
+- Nginx (reverse proxy, HTTPS termination)
+- Docker (containerized application)
+- Azure VM (cloud hosting)
+
+### Security
+- CSRF protection (Flask-WTF)
+- Rate limiting (Flask-Limiter)
+- Per-account lockout system
+- Session security (HTTPOnly, Secure, SameSite cookies)
+- Password hashing (Werkzeug / bcrypt)
+- Atomic database transactions (race condition protection)
+- Decimal-based financial calculations (no floating-point errors)
+- Security headers (HSTS, CSP, X-Frame-Options, etc.)
+
+### DevSecOps / CI-CD
+- GitHub Actions (automated deployment)
+- OWASP ZAP (automated security scanning on every push)
+- SSH-based deployment pipeline to Azure VM
