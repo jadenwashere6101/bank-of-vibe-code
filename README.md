@@ -2,6 +2,10 @@
 
 A full-stack banking system built using Flask, MySQL, and deployed on an Azure VM.
 
+## Project Writeup
+
+[View the full case study](./WRITEUP.pdf)
+
 ## Features
 - User registration and login
 - Session-based authentication
