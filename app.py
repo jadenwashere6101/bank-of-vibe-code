@@ -95,8 +95,11 @@ def login():
             cursor.execute(reset_query, (username,))
             db.commit()
 
+
+            session.clear()
             session.permanent = True
             session["username"] = user["username"]
+
 
             app.logger.info(f"User logged in: {username} from IP: {request.remote_addr}")
 
@@ -235,7 +238,6 @@ def deposit():
 
 @app.route("/withdraw", methods=["POST"])
 @limiter.limit("10 per minute")
-@limiter.limit("10 per minute")
 def withdraw():
     if "username" not in session:
         return redirect(url_for("login"))
@@ -314,8 +316,12 @@ def register():
             return render_template("register.html", error="Password is too long.")
 
 
-        checking_balance = float(request.form["checking_balance"])
-        savings_balance = float(request.form["savings_balance"])
+        try:
+            checking_balance = Decimal(request.form["checking_balance"])
+            savings_balance = Decimal(request.form["savings_balance"])
+        except InvalidOperation:
+             return render_template("register.html", error="Invalid balance input.")
+
 
         # Required fields check
         if not full_name or not username or not password:
