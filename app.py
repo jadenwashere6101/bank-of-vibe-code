@@ -10,6 +10,8 @@ from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf import CSRFProtect
 from decimal import Decimal, InvalidOperation
+from datetime import datetime, timedelta
+
 
 
 load_dotenv()
@@ -61,29 +63,80 @@ def home():
 @limiter.limit("5 per minute")
 def login():
     if request.method == "POST":
-        username = request.form["username"]
+        username = request.form["username"].strip()
         password = request.form["password"]
 
         db = get_db_connection()
-        cursor = db.cursor()
+        cursor = db.cursor(dictionary=True)
 
-        query = "SELECT * FROM users WHERE username = %s"
+        query = """
+        SELECT id, username, password, failed_login_attempts, lockout_until
+        FROM users
+        WHERE username = %s
+        """
         cursor.execute(query, (username,))
         user = cursor.fetchone()
 
+        # Check if account is locked
+        if user and user["lockout_until"] is not None:
+            if datetime.utcnow() < user["lockout_until"]:
+                cursor.close()
+                db.close()
+                app.logger.warning(f"Locked account login attempt for username: {username} from IP: {request.remote_addr}")
+                return render_template("login.html", error="Account temporarily locked. Please try again later.")
+
+        # Successful login
+        if user and check_password_hash(user["password"], password):
+            reset_query = """
+            UPDATE users
+            SET failed_login_attempts = 0, lockout_until = NULL
+            WHERE username = %s
+            """
+            cursor.execute(reset_query, (username,))
+            db.commit()
+
+            session.permanent = True
+            session["username"] = user["username"]
+
+            app.logger.info(f"User logged in: {username} from IP: {request.remote_addr}")
+
+            cursor.close()
+            db.close()
+            return redirect(url_for("dashboard"))
+
+        # Failed login
+        if user:
+            new_attempts = user["failed_login_attempts"] + 1
+
+            if new_attempts >= 5:
+                lockout_time = datetime.utcnow() + timedelta(minutes=15)
+                fail_query = """
+                UPDATE users
+                SET failed_login_attempts = %s, lockout_until = %s
+                WHERE username = %s
+                """
+                cursor.execute(fail_query, (new_attempts, lockout_time, username))
+                db.commit()
+
+                app.logger.warning(f"Account locked for username: {username} from IP: {request.remote_addr}")
+
+                cursor.close()
+                db.close()
+                return render_template("login.html", error="Account locked for 15 minutes due to too many failed attempts.")
+            else:
+                fail_query = """
+                UPDATE users
+                SET failed_login_attempts = %s
+                WHERE username = %s
+                """
+                cursor.execute(fail_query, (new_attempts, username))
+                db.commit()
+
+        app.logger.warning(f"Failed login attempt for username: {username} from IP: {request.remote_addr}")
+
         cursor.close()
         db.close()
-
-        if user and check_password_hash(user[3], password):
-            session.permanent = True
-            session["username"] = user[2]
-            # SUCCESS LOG: This helps you see who is actually using your app
-            app.logger.info(f"User logged in: {username} from IP: {request.remote_addr}")
-            return redirect(url_for("dashboard"))
-        else:
-            # FAILURE LOG: This is key for spotting hackers trying to guess passwords
-            app.logger.warning(f"Failed login attempt for username: {username} from IP: {request.remote_addr}")
-            return render_template("login.html", error="Invalid username or password")
+        return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
 
