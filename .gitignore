@@ -1,2 +1,27 @@
+# Environment variables
 .env
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.env/
+.env.*
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# VSCode / editors
+.vscode/
+
+# Docker
+*.tar
+
+# Misc
+*.swp
