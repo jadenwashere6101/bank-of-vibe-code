@@ -31,15 +31,7 @@ This project was developed with AI as a tool, but all architectural decisions, s
 - Azure VM (cloud hosting)
 
 ##  System Architecture
-User
-↓
-Nginx (HTTPS, headers)
-↓
-Gunicorn (4 workers)
-↓
-Flask app
-↓
-MySQL
+User → Nginx (HTTPS, headers) → Gunicorn (4 workers) → Flask app → MySQL
 
 ### Security
 - CSRF protection (Flask-WTF)
