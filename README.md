@@ -33,6 +33,9 @@ This project was developed with AI as a tool, but all architectural decisions, s
 ##  System Architecture
 User → Nginx (HTTPS, headers) → Gunicorn (4 workers) → Flask app → MySQL
 
+## 📈 Scalability Notes
+The current setup is designed for moderate traffic on a single Azure VM. Gunicorn uses multiple workers to handle concurrent requests, but larger-scale traffic would require multiple app instances behind a load balancer and a shared backend such as Redis for session/state management.
+
 ### Security
 - CSRF protection (Flask-WTF)
 - Rate limiting (Flask-Limiter)
