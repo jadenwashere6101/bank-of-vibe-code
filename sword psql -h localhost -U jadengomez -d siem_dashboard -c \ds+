@@ -1,0 +1,7 @@
+                                      List of relations
+ Schema |  Name  | Type  |  Owner   | Persistence | Access method |    Size    | Description 
+--------+--------+-------+----------+-------------+---------------+------------+-------------
+ public | alerts | table | postgres | permanent   | heap          | 8192 bytes | 
+ public | events | table | postgres | permanent   | heap          | 8192 bytes | 
+(2 rows)
+

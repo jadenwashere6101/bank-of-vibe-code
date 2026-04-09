@@ -5,3 +5,4 @@ Werkzeug
 Flask-Limiter
 Flask-WTF
 gunicorn
+requests

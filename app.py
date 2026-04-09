@@ -11,7 +11,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf import CSRFProtect
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta
-
+import requests
 
 
 load_dotenv()
@@ -23,6 +23,9 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = 1800
+
+SIEM_API_URL = os.getenv("SIEM_API_URL", "http://127.0.0.1:5050/ingest")
+SIEM_INGEST_API_KEY = os.getenv("SIEM_INGEST_API_KEY", "")
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -54,6 +57,27 @@ def get_db_connection():
         database=os.getenv("DB_NAME")
     )
 
+
+def send_siem_event(event_type, severity, source_ip, message, app_name="bank_app", environment="prod"):
+    payload = {
+        "event_type": event_type,
+        "severity": severity,
+        "source_ip": source_ip,
+        "message": message,
+        "app_name": app_name,
+        "environment": environment,
+    }
+
+    headers = {"Content-Type": "application/json"}
+    if SIEM_INGEST_API_KEY:
+        headers["X-API-Key"] = SIEM_INGEST_API_KEY
+
+    try:
+        requests.post(SIEM_API_URL, json=payload, headers=headers, timeout=5)
+    except Exception as e:
+        app.logger.error("Failed to send SIEM event: %s", e)
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -83,6 +107,12 @@ def login():
                 cursor.close()
                 db.close()
                 app.logger.warning(f"Locked account login attempt for username: {username} from IP: {request.remote_addr}")
+                send_siem_event(
+                    event_type="failed_login",
+                    severity="low",
+                    source_ip=request.remote_addr,
+                    message=f"Locked account login attempt for username: {username}"
+                )
                 return render_template("login.html", error="Account temporarily locked. Please try again later.")
 
         # Successful login
@@ -95,11 +125,9 @@ def login():
             cursor.execute(reset_query, (username,))
             db.commit()
 
-
             session.clear()
             session.permanent = True
             session["username"] = user["username"]
-
 
             app.logger.info(f"User logged in: {username} from IP: {request.remote_addr}")
 
@@ -122,6 +150,12 @@ def login():
                 db.commit()
 
                 app.logger.warning(f"Account locked for username: {username} from IP: {request.remote_addr}")
+                send_siem_event(
+                    event_type="failed_login",
+                    severity="high",
+                    source_ip=request.remote_addr,
+                    message=f"Account locked after repeated failed logins for username: {username}"
+                )
 
                 cursor.close()
                 db.close()
@@ -136,13 +170,18 @@ def login():
                 db.commit()
 
         app.logger.warning(f"Failed login attempt for username: {username} from IP: {request.remote_addr}")
+        send_siem_event(
+            event_type="failed_login",
+            severity="low",
+            source_ip=request.remote_addr,
+            message=f"Failed login attempt for username: {username}"
+        )
 
         cursor.close()
         db.close()
         return render_template("login.html", error="Invalid username or password")
 
     return render_template("login.html")
-
 
 
 @app.route("/dashboard")
@@ -184,7 +223,6 @@ def dashboard():
     )
 
 
-
 @app.route("/logout")
 def logout():
     session.pop("username", None)
@@ -207,7 +245,6 @@ def deposit():
     if amount <= 0 or amount > Decimal("10000.00"):
         return redirect(url_for("dashboard"))
 
-
     db = get_db_connection()
     cursor = db.cursor()
 
@@ -226,14 +263,12 @@ def deposit():
 
     db.commit()
 
-    # TRANSACTION LOG: This records the movement of money in your server logs
     app.logger.info(f"Deposit: user={username} amount={amount} account={account}")
 
     cursor.close()
     db.close()
 
     return redirect(url_for("dashboard"))
-
 
 
 @app.route("/withdraw", methods=["POST"])
@@ -296,7 +331,6 @@ def withdraw():
     return redirect(url_for("dashboard"))
 
 
-
 @app.route("/register", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def register():
@@ -304,7 +338,6 @@ def register():
         full_name = request.form["full_name"].strip()
         username = request.form["username"].strip()
         password = request.form["password"]
-
 
         if len(full_name) > 100:
             return render_template("register.html", error="Full name is too long.")
@@ -315,19 +348,15 @@ def register():
         if len(password) > 128:
             return render_template("register.html", error="Password is too long.")
 
-
         try:
             checking_balance = Decimal(request.form["checking_balance"])
             savings_balance = Decimal(request.form["savings_balance"])
         except InvalidOperation:
-             return render_template("register.html", error="Invalid balance input.")
+            return render_template("register.html", error="Invalid balance input.")
 
-
-        # Required fields check
         if not full_name or not username or not password:
             return render_template("register.html", error="All required fields must be filled out.")
 
-        # Password strength check
         if len(password) < 8:
             return render_template("register.html", error="Password must be at least 8 characters")
 
@@ -339,7 +368,6 @@ def register():
         db = get_db_connection()
         cursor = db.cursor()
 
-        # Check if username already exists
         cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
         existing_user = cursor.fetchone()
 
@@ -357,7 +385,6 @@ def register():
         cursor.execute(query, values)
         db.commit()
 
-        # REGISTRATION LOG: Track new users and their IP for security/growth metrics
         app.logger.info(f"New user registered: {username} from IP: {request.remote_addr}")
 
         cursor.close()
@@ -366,8 +393,6 @@ def register():
         return render_template("register_success.html", name=full_name)
 
     return render_template("register.html")
-
-
 
 
 @app.after_request
@@ -388,10 +413,10 @@ def add_security_headers(response):
     return response
 
 
-
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template("404.html"), 404
+
 
 @app.errorhandler(500)
 def internal_error(error):
@@ -403,7 +428,5 @@ def ratelimit_handler(e):
     return render_template("login.html", error="Too many login attempts. Please wait a minute and try again."), 429
 
 
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-
